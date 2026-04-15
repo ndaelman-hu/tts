@@ -35,6 +35,7 @@ library
                     , text
                     , bytestring
                     , typed-process
+                    , process
                     , optparse-applicative
                     , req
                     , scalpel

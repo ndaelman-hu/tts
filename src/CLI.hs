@@ -2,51 +2,74 @@
 
 module CLI
     ( Command(..)
+    , CommandOptions(..)
     , parseCommand
     , runCommand
     ) where
 
-import Control.Monad (forM_)
+import Control.Monad (forM_, when)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import Options.Applicative
-import System.FilePath ((</>))
+import System.Process (callCommand)
 import Config
 import Content.File (readTextFile)
-import TTS.Piper (synthesizeToFile, listVoices)
+import TTS.Piper (synthesizeToFile, synthesize, listVoices)
 import TTS.Types
 
+-- | Options that apply to all commands
+data CommandOptions = CommandOptions
+    { optVoice :: Maybe FilePath
+    , optSpeed :: Maybe Double
+    , optPlay  :: Bool
+    } deriving (Show)
+
 data Command
-    = ReadFile FilePath (Maybe FilePath)
-    | ReadURL String (Maybe FilePath)
+    = ReadFile FilePath (Maybe FilePath) CommandOptions
+    | ReadURL String (Maybe FilePath) CommandOptions
     | ListVoices
-    | Interactive
+    | Interactive CommandOptions
+
+-- | Parse command-line options
+parseOptions :: Parser CommandOptions
+parseOptions = CommandOptions
+    <$> optional (strOption (long "voice" <> short 'v' <> metavar "VOICE" <> help "Voice model file (e.g., voices/en_US-lessac-medium.onnx)"))
+    <*> optional (option auto (long "speed" <> short 's' <> metavar "SPEED" <> help "Speech speed (0.5-2.0, default 1.0)"))
+    <*> switch (long "play" <> short 'p' <> help "Play audio directly instead of saving to file")
 
 parseCommand :: Parser Command
 parseCommand = subparser
     (  command "read-file" (info readFileCmd (progDesc "Read a text file"))
     <> command "read-url" (info readURLCmd (progDesc "Read from a URL"))
     <> command "list-voices" (info (pure ListVoices) (progDesc "List available voices"))
-    <> command "interactive" (info (pure Interactive) (progDesc "Interactive mode"))
+    <> command "interactive" (info interactiveCmd (progDesc "Interactive mode"))
     )
   where
     readFileCmd = ReadFile
         <$> argument str (metavar "FILE")
-        <*> optional (strOption (long "output" <> short 'o' <> metavar "OUTPUT"))
+        <*> optional (strOption (long "output" <> short 'o' <> metavar "OUTPUT" <> help "Output WAV file"))
+        <*> parseOptions
     readURLCmd = ReadURL
         <$> argument str (metavar "URL")
-        <*> optional (strOption (long "output" <> short 'o' <> metavar "OUTPUT"))
+        <*> optional (strOption (long "output" <> short 'o' <> metavar "OUTPUT" <> help "Output WAV file"))
+        <*> parseOptions
+    interactiveCmd = Interactive <$> parseOptions
 
 runCommand :: Config -> Command -> IO ()
-runCommand cfg (ReadFile filePath maybeOutput) = do
+runCommand cfg (ReadFile filePath maybeOutput opts) = do
     text <- readTextFile filePath
-    voice <- loadDefaultVoice cfg
-    let outputPath = maybe "output.wav" id maybeOutput
-    synthesizeToFile voice (cfgDefaultSpeed cfg) text outputPath
-    putStrLn $ "Audio saved to: " ++ outputPath
+    voice <- loadVoice cfg (optVoice opts)
+    speed <- getSpeed cfg (optSpeed opts)
 
-runCommand cfg (ReadURL url maybeOutput) = do
+    if optPlay opts
+        then playAudio voice speed text
+        else do
+            let outputPath = maybe "output.wav" id maybeOutput
+            synthesizeToFile voice speed text outputPath
+            putStrLn $ "Audio saved to: " ++ outputPath
+
+runCommand cfg (ReadURL _url _maybeOutput _opts) = do
     putStrLn "URL reading not yet implemented"
     -- TODO: Implement URL fetching and parsing
 
@@ -55,15 +78,43 @@ runCommand cfg ListVoices = do
     putStrLn "Available voices:"
     forM_ voices $ \v -> TIO.putStrLn $ "  - " <> voiceName v
 
-runCommand cfg Interactive = do
+runCommand cfg (Interactive opts) = do
     putStrLn "Interactive mode - enter text to synthesize (Ctrl+D to exit):"
     text <- TIO.getContents
-    voice <- loadDefaultVoice cfg
-    synthesizeToFile voice (cfgDefaultSpeed cfg) text "output.wav"
-    putStrLn "Audio saved to: output.wav"
+    voice <- loadVoice cfg (optVoice opts)
+    speed <- getSpeed cfg (optSpeed opts)
 
-loadDefaultVoice :: Config -> IO Voice
-loadDefaultVoice cfg = do
-    let modelPath = cfgDefaultVoice cfg
-    let name = T.pack $ cfgDefaultVoice cfg
+    if optPlay opts
+        then playAudio voice speed text
+        else do
+            synthesizeToFile voice speed text "output.wav"
+            putStrLn "Audio saved to: output.wav"
+
+-- | Play audio directly using aplay
+playAudio :: Voice -> Speed -> Text -> IO ()
+playAudio voice speed text = do
+    putStrLn "Playing audio..."
+    audioData <- synthesize voice speed text
+    -- Use aplay to play raw audio from stdin
+    -- Piper outputs WAV format, so we can pipe directly
+    let proc = "aplay -q"  -- -q for quiet mode
+    callCommand $ "echo '" ++ T.unpack text ++ "' | " ++ piperCmd voice speed ++ " | aplay -q"
+  where
+    piperCmd v (Speed s) =
+        "bin/piper --model " ++ voiceModelPath v ++
+        " --output_file - --length_scale " ++ show (1.0 / s) ++ " --quiet"
+
+-- | Load voice model (use specified or default)
+loadVoice :: Config -> Maybe FilePath -> IO Voice
+loadVoice cfg maybeVoicePath = do
+    let modelPath = maybe (cfgDefaultVoice cfg) id maybeVoicePath
+    let name = T.pack modelPath
     return $ Voice modelPath name (Language "en")
+
+-- | Get speed (use specified or default)
+getSpeed :: Config -> Maybe Double -> IO Speed
+getSpeed cfg maybeSpeed = do
+    let speedVal = maybe 1.0 id maybeSpeed
+    case mkSpeed speedVal of
+        Left err -> error $ "Invalid speed: " ++ err
+        Right s -> return s
