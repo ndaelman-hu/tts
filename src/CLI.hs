@@ -7,15 +7,17 @@ module CLI
     , runCommand
     ) where
 
-import Control.Monad (forM_, when)
+import Control.Monad (forM_)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import Options.Applicative
-import System.Process (callCommand)
+import System.Process.Typed
+import System.IO.Temp (withSystemTempFile)
+import System.IO (hClose)
 import Config
 import Content.File (readTextFile)
-import TTS.Piper (synthesizeToFile, synthesize, listVoices)
+import TTS.Piper (synthesizeToFile, listVoices)
 import TTS.Types
 
 -- | Options that apply to all commands
@@ -94,15 +96,11 @@ runCommand cfg (Interactive opts) = do
 playAudio :: Voice -> Speed -> Text -> IO ()
 playAudio voice speed text = do
     putStrLn "Playing audio..."
-    audioData <- synthesize voice speed text
-    -- Use aplay to play raw audio from stdin
-    -- Piper outputs WAV format, so we can pipe directly
-    let proc = "aplay -q"  -- -q for quiet mode
-    callCommand $ "echo '" ++ T.unpack text ++ "' | " ++ piperCmd voice speed ++ " | aplay -q"
-  where
-    piperCmd v (Speed s) =
-        "bin/piper --model " ++ voiceModelPath v ++
-        " --output_file - --length_scale " ++ show (1.0 / s) ++ " --quiet"
+    -- Write to temporary file and play it (aplay doesn't handle stdin WAV streams well)
+    withSystemTempFile "piper-reader.wav" $ \tmpPath tmpHandle -> do
+        hClose tmpHandle  -- Close the handle so synthesizeToFile can write
+        synthesizeToFile voice speed text tmpPath
+        runProcess_ $ proc "aplay" ["-q", tmpPath]
 
 -- | Load voice model (use specified or default)
 loadVoice :: Config -> Maybe FilePath -> IO Voice
