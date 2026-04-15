@@ -1,0 +1,24 @@
+# Binaries and models (too large for git)
+bin/
+voices/
+
+# Haskell build artifacts
+.stack-work/
+dist/
+dist-newstyle/
+*.hi
+*.o
+*.cabal
+
+# Environment and temporary files
+.env
+*.wav
+*.mp3
+test.wav
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
