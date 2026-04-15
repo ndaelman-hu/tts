@@ -7,12 +7,11 @@ module TTS.Piper
     , piperBinaryPath
     ) where
 
-import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
-import System.Directory (listDirectory, doesFileExist)
+import System.Directory (listDirectory)
 import System.FilePath ((</>), takeExtension, dropExtension, takeFileName)
 import System.Process.Typed
 import TTS.Types

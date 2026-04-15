@@ -10,9 +10,7 @@ module TTS.Types
     ) where
 
 import Data.Text (Text)
-import qualified Data.Text as T
 import GHC.Generics (Generic)
-import System.FilePath (FilePath)
 
 -- | Voice model configuration
 data Voice = Voice

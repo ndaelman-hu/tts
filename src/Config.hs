@@ -32,6 +32,6 @@ loadConfig = parse id configParser
   where
     configParser = Config
         <$> var str "PIPER_DEFAULT_VOICE" (def "voices/en_US-lessac-medium.onnx" <> help "Default voice model")
-        <$> var str "PIPER_VOICES_DIR" (def "voices" <> help "Voices directory")
-        <$> var str "PIPER_BIN_DIR" (def "bin" <> help "Binary directory")
+        <*> var str "PIPER_VOICES_DIR" (def "voices" <> help "Voices directory")
+        <*> var str "PIPER_BIN_DIR" (def "bin" <> help "Binary directory")
         <*> pure defaultSpeed

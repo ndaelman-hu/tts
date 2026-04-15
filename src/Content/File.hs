@@ -6,7 +6,6 @@ module Content.File
 
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
-import System.FilePath (takeExtension)
 
 -- | Read text from a file
 readTextFile :: FilePath -> IO T.Text
