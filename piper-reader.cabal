@@ -1,0 +1,59 @@
+cabal-version:      2.4
+name:               piper-reader
+version:            0.1.0.0
+synopsis:           Privacy-focused local text-to-speech reader using Piper
+description:        Privacy-focused local text-to-speech reader using Piper
+license:            MIT
+author:             Nathan
+maintainer:         nathan@example.com
+copyright:          2026 Nathan
+category:           Audio
+build-type:         Simple
+extra-doc-files:    README.md
+
+common warnings
+    ghc-options: -Wall
+                 -Wcompat
+                 -Widentities
+                 -Wincomplete-record-updates
+                 -Wincomplete-uni-patterns
+                 -Wmissing-export-lists
+                 -Wmissing-home-modules
+                 -Wpartial-fields
+                 -Wredundant-constraints
+
+library
+    import:           warnings
+    exposed-modules:  Config
+                    , CLI
+                    , TTS.Types
+                    , TTS.Piper
+                    , Content.File
+                    , Content.Fetch
+                    , Content.Parser
+    build-depends:    base >= 4.7 && < 5
+                    , text
+                    , bytestring
+                    , typed-process
+                    , optparse-applicative
+                    , req
+                    , scalpel
+                    , envparse
+                    , filepath
+                    , directory
+                    , aeson
+                    , transformers
+                    , mtl
+                    , modern-uri
+    hs-source-dirs:   src
+    default-language: Haskell2010
+
+executable piper-reader
+    import:           warnings
+    main-is:          Main.hs
+    build-depends:    base >= 4.7 && < 5
+                    , piper-reader
+                    , optparse-applicative
+    hs-source-dirs:   app
+    default-language: Haskell2010
+    ghc-options:      -threaded -rtsopts -with-rtsopts=-N

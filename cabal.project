@@ -1,0 +1,8 @@
+packages: .
+
+-- Use GHC 9.6.7 (your installed version)
+with-compiler: ghc-9.6.7
+
+-- Optimization
+package piper-reader
+  optimization: True

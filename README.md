@@ -25,24 +25,24 @@ Download more voices from: https://huggingface.co/rhasspy/piper-voices/tree/main
 
 ```bash
 cd ~/Programs/piper-reader
-stack build
+cabal build
 ```
 
 ## Usage
 
 ### Read a text file
 ```bash
-stack exec piper-reader -- read-file myfile.txt
+cabal run piper-reader -- read-file myfile.txt
 ```
 
 ### List available voices
 ```bash
-stack exec piper-reader -- list-voices
+cabal run piper-reader -- list-voices
 ```
 
 ### Interactive mode
 ```bash
-stack exec piper-reader -- interactive
+cabal run piper-reader -- interactive
 # Type or paste text, then Ctrl+D
 ```
 

@@ -1,3 +1,6 @@
+# NOTE: This project uses Cabal, not Stack.
+# This package.yaml is kept for reference but piper-reader.cabal is the source of truth.
+
 name:                piper-reader
 version:             0.1.0.0
 github:              "user/piper-reader"

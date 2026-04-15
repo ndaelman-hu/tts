@@ -33,7 +33,7 @@ The code as written has some issues that need fixing:
 **Quick fix approach:**
 ```bash
 cd ~/Programs/piper-reader
-stack build
+cabal build
 # Fix any compilation errors that appear
 ```
 
@@ -43,7 +43,7 @@ Once it builds:
 ```bash
 # Test file reading
 echo "Hello world" > test.txt
-stack exec piper-reader -- read-file test.txt
+cabal run piper-reader -- read-file test.txt
 
 # Should create output.wav
 # Play it with: aplay output.wav
@@ -76,17 +76,17 @@ Current `Content.Fetch` is a stub. To properly implement:
 cd ~/Programs/piper-reader
 
 # 1. Try to build
-stack build
+cabal build
 
 # 2. If it builds, test
 echo "Testing piper reader" > test.txt
-stack exec piper-reader -- read-file test.txt
+cabal run piper-reader -- read-file test.txt
 
 # 3. Play the result
 aplay output.wav  # or mpv, vlc, etc.
 
 # 4. List voices
-stack exec piper-reader -- list-voices
+cabal run piper-reader -- list-voices
 ```
 
 ## Known Issues to Fix
@@ -107,13 +107,13 @@ stack exec piper-reader -- list-voices
 
 - Piper voices: https://rhasspy.github.io/piper-samples/
 - Voice models: https://huggingface.co/rhasspy/piper-voices
-- Stack docs: https://docs.haskellstack.org/
+- Cabal docs: https://www.haskell.org/cabal/
 
 ## When You Start New Session
 
 1. `cd ~/Programs/piper-reader`
 2. Read this file
-3. Try `stack build` first
+3. Try `cabal build` first
 4. Fix any compilation errors
-5. Test with simple file: `echo "test" > test.txt && stack exec piper-reader -- read-file test.txt`
+5. Test with simple file: `echo "test" > test.txt && cabal run piper-reader -- read-file test.txt`
 6. Listen to output.wav to verify it works
