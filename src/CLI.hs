@@ -15,6 +15,7 @@ import Options.Applicative
 import System.Process.Typed
 import System.IO.Temp (withSystemTempFile)
 import System.IO (hClose)
+import System.FilePath (takeFileName, dropExtension)
 import Config
 import Content.File (readTextFile)
 import TTS.Piper (synthesizeToFile, listVoices)
@@ -23,6 +24,7 @@ import TTS.Types
 -- | Options that apply to all commands
 data CommandOptions = CommandOptions
     { optVoice :: Maybe FilePath
+    , optLang  :: Maybe Text
     , optSpeed :: Maybe Double
     , optPlay  :: Bool
     } deriving (Show)
@@ -37,6 +39,7 @@ data Command
 parseOptions :: Parser CommandOptions
 parseOptions = CommandOptions
     <$> optional (strOption (long "voice" <> short 'v' <> metavar "VOICE" <> help "Voice model file (e.g., voices/en_US-lessac-medium.onnx)"))
+    <*> optional (fmap T.pack $ strOption (long "lang" <> short 'l' <> metavar "LANG" <> help "Language code (e.g., en, es, fr, de)"))
     <*> optional (option auto (long "speed" <> short 's' <> metavar "SPEED" <> help "Speech speed (0.5-2.0, default 1.0)"))
     <*> switch (long "play" <> short 'p' <> help "Play audio directly instead of saving to file")
 
@@ -61,7 +64,7 @@ parseCommand = subparser
 runCommand :: Config -> Command -> IO ()
 runCommand cfg (ReadFile filePath maybeOutput opts) = do
     text <- readTextFile filePath
-    voice <- loadVoice cfg (optVoice opts)
+    voice <- loadVoice cfg (optVoice opts) (optLang opts)
     speed <- getSpeed cfg (optSpeed opts)
 
     if optPlay opts
@@ -78,12 +81,14 @@ runCommand cfg (ReadURL _url _maybeOutput _opts) = do
 runCommand cfg ListVoices = do
     voices <- listVoices (cfgVoicesDir cfg)
     putStrLn "Available voices:"
-    forM_ voices $ \v -> TIO.putStrLn $ "  - " <> voiceName v
+    forM_ voices $ \v -> do
+        let Language langCode = voiceLanguage v
+        TIO.putStrLn $ "  - " <> voiceName v <> " (Language: " <> langCode <> ")"
 
 runCommand cfg (Interactive opts) = do
     putStrLn "Interactive mode - enter text to synthesize (Ctrl+D to exit):"
     text <- TIO.getContents
-    voice <- loadVoice cfg (optVoice opts)
+    voice <- loadVoice cfg (optVoice opts) (optLang opts)
     speed <- getSpeed cfg (optSpeed opts)
 
     if optPlay opts
@@ -102,12 +107,30 @@ playAudio voice speed text = do
         synthesizeToFile voice speed text tmpPath
         runProcess_ $ proc "aplay" ["-q", tmpPath]
 
--- | Load voice model (use specified or default)
-loadVoice :: Config -> Maybe FilePath -> IO Voice
-loadVoice cfg maybeVoicePath = do
-    let modelPath = maybe (cfgDefaultVoice cfg) id maybeVoicePath
-    let name = T.pack modelPath
-    return $ Voice modelPath name (Language "en")
+-- | Load voice model (use specified, language-based, or default)
+loadVoice :: Config -> Maybe FilePath -> Maybe Text -> IO Voice
+loadVoice cfg maybeVoicePath maybeLang = do
+    case (maybeVoicePath, maybeLang) of
+        -- Voice path explicitly specified
+        (Just voicePath, _) -> createVoice voicePath
+        -- Language specified, find first matching voice
+        (Nothing, Just langCode) -> do
+            voices <- listVoices (cfgVoicesDir cfg)
+            case filter (\v -> voiceLanguage v == Language langCode) voices of
+                (v:_) -> return v
+                []    -> error $ "No voice found for language: " ++ T.unpack langCode
+                         ++ "\nRun 'piper-reader list-voices' to see available voices"
+        -- Use default voice
+        (Nothing, Nothing) -> createVoice (cfgDefaultVoice cfg)
+  where
+    createVoice :: FilePath -> IO Voice
+    createVoice modelPath = do
+        let name = T.pack $ dropExtension $ takeFileName modelPath
+        -- Extract language from filename (e.g., "en_US-lessac-medium" -> "en")
+        let lang = case T.split (== '_') name of
+                    (l:_) -> Language l
+                    []    -> Language "unknown"
+        return $ Voice modelPath name lang
 
 -- | Get speed (use specified or default)
 getSpeed :: Config -> Maybe Double -> IO Speed
