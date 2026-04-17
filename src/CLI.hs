@@ -74,7 +74,7 @@ runCommand cfg (ReadFile filePath maybeOutput opts) = do
             synthesizeToFile voice speed text outputPath
             putStrLn $ "Audio saved to: " ++ outputPath
 
-runCommand cfg (ReadURL _url _maybeOutput _opts) = do
+runCommand _cfg (ReadURL _url _maybeOutput _opts) = do
     putStrLn "URL reading not yet implemented"
     -- TODO: Implement URL fetching and parsing
 
@@ -134,7 +134,7 @@ loadVoice cfg maybeVoicePath maybeLang = do
 
 -- | Get speed (use specified or default)
 getSpeed :: Config -> Maybe Double -> IO Speed
-getSpeed cfg maybeSpeed = do
+getSpeed _cfg maybeSpeed = do
     let speedVal = maybe 1.0 id maybeSpeed
     case mkSpeed speedVal of
         Left err -> error $ "Invalid speed: " ++ err
