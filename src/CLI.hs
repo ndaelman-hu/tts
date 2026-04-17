@@ -87,7 +87,8 @@ runCommand cfg ListVoices = do
 
 runCommand cfg (Interactive opts) = do
     putStrLn "Interactive mode - enter text to synthesize (Ctrl+D to exit):"
-    text <- TIO.getContents
+    rawText <- TIO.getContents
+    let text = stripBracketedPaste rawText
     voice <- loadVoice cfg (optVoice opts) (optLang opts)
     speed <- getSpeed cfg (optSpeed opts)
 
@@ -139,3 +140,9 @@ getSpeed _cfg maybeSpeed = do
     case mkSpeed speedVal of
         Left err -> error $ "Invalid speed: " ++ err
         Right s -> return s
+
+-- | Strip bracketed paste mode escape sequences from text
+-- Terminals send ESC[200~ and ESC[201~ to mark pasted content
+stripBracketedPaste :: Text -> Text
+stripBracketedPaste text =
+    T.replace "\ESC[200~" "" $ T.replace "\ESC[201~" "" text
