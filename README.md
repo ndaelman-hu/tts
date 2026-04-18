@@ -21,7 +21,6 @@ The Piper binary is already downloaded in `bin/`.
 ### 2. Voice Models
 
 #### Installed Voices
-- `en_US-lessac-medium.onnx` (English - US)
 - `en_US-bryce-medium.onnx` (English - US)
 - `es_ES-davefx-medium.onnx` (Spanish - Spain)
 - `es_MX-claude-high.onnx` (Spanish - Mexico)

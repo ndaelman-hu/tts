@@ -165,7 +165,7 @@ cabal run piper-reader -- read-file article.txt \
 
 ```bash
 cabal run piper-reader -- read-file book_chapter.txt \
-  --voice voices/en_US-lessac-medium.onnx \
+  --voice voices/en_US-bryce-medium.onnx \
   --speed 1.4 \
   --play
 ```
@@ -244,9 +244,8 @@ cabal run piper-reader -- read-file spanish.txt \
   --voice voices/es_MX-claude-high.onnx \
   --play
 
-# Compare two English voices
+# Test different English voice
 cabal run piper-reader -- read-file test.txt --voice voices/en_US-bryce-medium.onnx --play
-cabal run piper-reader -- read-file test.txt --voice voices/en_US-lessac-medium.onnx --play
 ```
 
 ## Multilingual Usage

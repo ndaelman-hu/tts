@@ -16,7 +16,6 @@ cabal run piper-reader -- list-voices
 ```
 
 Default installation includes:
-- `en_US-lessac-medium` (English - US)
 - `en_US-bryce-medium` (English - US)
 - `es_ES-davefx-medium` (Spanish - Spain)
 - `es_MX-claude-high` (Spanish - Mexico)
