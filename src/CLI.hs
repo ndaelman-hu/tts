@@ -45,18 +45,25 @@ parseOptions = CommandOptions
 
 parseCommand :: Parser Command
 parseCommand = subparser
-    (  command "read-file" (info readFileCmd (progDesc "Read a text file"))
-    <> command "read-url" (info readURLCmd (progDesc "Read from a URL"))
-    <> command "list-voices" (info (pure ListVoices) (progDesc "List available voices"))
-    <> command "interactive" (info interactiveCmd (progDesc "Interactive mode"))
+    (  command "read-file" (info (readFileCmd <**> helper)
+        ( progDesc "Read a text file and convert to speech"
+       <> footer "Example: piper-reader read-file document.txt --lang es --play" ))
+    <> command "read-url" (info (readURLCmd <**> helper)
+        ( progDesc "Read from a URL (not yet implemented)" ))
+    <> command "list-voices" (info (pure ListVoices <**> helper)
+        ( progDesc "List all installed voices with their languages"
+       <> footer "Example: piper-reader list-voices" ))
+    <> command "interactive" (info (interactiveCmd <**> helper)
+        ( progDesc "Read text from stdin (pipe or type, then Ctrl+D)"
+       <> footer "Example: echo 'Hello' | piper-reader interactive --lang en --play" ))
     )
   where
     readFileCmd = ReadFile
-        <$> argument str (metavar "FILE")
+        <$> argument str (metavar "FILE" <> help "Text file to read")
         <*> optional (strOption (long "output" <> short 'o' <> metavar "OUTPUT" <> help "Output WAV file"))
         <*> parseOptions
     readURLCmd = ReadURL
-        <$> argument str (metavar "URL")
+        <$> argument str (metavar "URL" <> help "URL to fetch and read")
         <*> optional (strOption (long "output" <> short 'o' <> metavar "OUTPUT" <> help "Output WAV file"))
         <*> parseOptions
     interactiveCmd = Interactive <$> parseOptions
