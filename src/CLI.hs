@@ -14,7 +14,7 @@ import qualified Data.Text.IO as TIO
 import Options.Applicative
 import System.Process.Typed
 import System.IO.Temp (withSystemTempFile)
-import System.IO (hClose)
+import System.IO (hClose, hFlush, stdout)
 import System.FilePath (takeFileName, dropExtension)
 import Config
 import Content.File (readTextFile)
@@ -93,9 +93,16 @@ runCommand cfg ListVoices = do
         TIO.putStrLn $ "  - " <> voiceName v <> " (Language: " <> langCode <> ")"
 
 runCommand cfg (Interactive opts) = do
+    -- Disable bracketed paste mode to prevent escape codes from being displayed
+    putStr "\ESC[?2004l"
+    hFlush stdout
     putStrLn "Interactive mode - enter text to synthesize (Ctrl+D to exit):"
     rawText <- TIO.getContents
     let text = stripBracketedPaste rawText
+    -- Re-enable bracketed paste mode
+    putStr "\ESC[?2004h"
+    hFlush stdout
+
     voice <- loadVoice cfg (optVoice opts) (optLang opts)
     speed <- getSpeed cfg (optSpeed opts)
 
