@@ -150,6 +150,18 @@ getSpeed _cfg maybeSpeed = do
 
 -- | Strip bracketed paste mode escape sequences from text
 -- Terminals send ESC[200~ and ESC[201~ to mark pasted content
+-- This strips all variations: actual escapes, caret notation, and control chars
 stripBracketedPaste :: Text -> Text
 stripBracketedPaste text =
-    T.replace "\ESC[200~" "" $ T.replace "\ESC[201~" "" text
+    let text1 = T.replace "\ESC[200~" "" $ T.replace "\ESC[201~" "" text
+        text2 = T.replace "^[[200~" "" $ T.replace "^[[201~" "" text1
+    in stripAnsiCSI text2
+
+-- | Strip ANSI CSI escape sequences (ESC[ ... letter)
+stripAnsiCSI :: Text -> Text
+stripAnsiCSI = T.pack . go . T.unpack
+  where
+    go [] = []
+    go ('\ESC':'[':rest) = go (dropWhile (/= '\ESC') $ dropWhile isAnsiParam rest)
+    go (c:rest) = c : go rest
+    isAnsiParam c = c >= '0' && c <= '?'
